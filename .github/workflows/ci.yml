@@ -59,8 +59,8 @@ jobs:
           cd frontend
           npm install
 
-      - name: Fix esbuild permissions
-        run: find frontend/node_modules -name "esbuild" -type f -exec chmod +x {} \;
+      - name: Fix binary permissions
+        run: chmod +x frontend/node_modules/.bin/*
 
       - name: Run tests
         run: |
