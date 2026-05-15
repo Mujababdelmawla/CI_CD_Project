@@ -8,7 +8,7 @@ on:
 
 jobs:
 
-  # ── JOB 1: Backend CI 
+  # ── JOB 1: Backend CI ────────────────────────────────────────────────────
   backend-ci:
     name: Flask Backend — Install, Test, Coverage
     runs-on: ubuntu-latest
@@ -39,7 +39,7 @@ jobs:
           path: backend/
           retention-days: 7
 
-  # ── JOB 2: Frontend CI
+  # ── JOB 2: Frontend CI ───────────────────────────────────────────────────
   frontend-ci:
     name: React Frontend — Install, Test, Build
     runs-on: ubuntu-latest
@@ -58,11 +58,12 @@ jobs:
         run: |
           cd frontend
           npm install
+          chmod +x node_modules/.bin/vitest
 
       - name: Run tests
         run: |
           cd frontend
-          npx vitest run
+          ./node_modules/.bin/vitest run
 
       - name: Build React app
         run: |
@@ -76,7 +77,7 @@ jobs:
           path: frontend/dist/
           retention-days: 7
 
-  # ── JOB 3: Summary 
+  # ── JOB 3: Summary ──────────────────────────────────────────────────────
   summary:
     name: CI Summary
     runs-on: ubuntu-latest
