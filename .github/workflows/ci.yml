@@ -58,7 +58,9 @@ jobs:
         run: |
           cd frontend
           npm install
-          chmod +x node_modules/.bin/vitest
+
+      - name: Fix esbuild permissions
+        run: find frontend/node_modules -name "esbuild" -type f -exec chmod +x {} \;
 
       - name: Run tests
         run: |
