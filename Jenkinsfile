@@ -30,7 +30,7 @@ pipeline {
                 sh '''
                     cd backend
                     python3 -m venv myvenv
-                    source myvenv/bin/activate
+                    . myvenv/bin/activate
                     pip install -r requirements.txt
                     pytest -v --cov=app --cov-report=term-missing
                 '''
@@ -62,8 +62,8 @@ pipeline {
                     echo "Stopping any existing staging server..."
                     pkill -f "python app.py" || true
 
-                    echo "Starting Flask on staging port ${BACKEND_PORT}..."
                     cd backend
+                    . myvenv/bin/activate 
                     nohup python app.py > /tmp/staging.log 2>&1 &
 
                     echo "Waiting for staging to be ready..."
@@ -120,6 +120,8 @@ pipeline {
                 echo ' Stage 6: Post-Deployment Health Checks'
                 echo '========================================='
                 sh '''
+
+                    . backend/myvenv/bin/activate
                     pip install requests
                     python monitor.py
                 '''
