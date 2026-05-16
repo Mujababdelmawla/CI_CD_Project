@@ -29,6 +29,8 @@ pipeline {
                 echo '========================================='
                 sh '''
                     cd backend
+                    python3 -m venv myvenv
+                    source myvenv/bin/activate
                     pip install -r requirements.txt
                     pytest -v --cov=app --cov-report=term-missing
                 '''
