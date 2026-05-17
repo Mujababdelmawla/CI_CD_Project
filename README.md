@@ -314,6 +314,4 @@ Total: ~74 seconds from push to live
 
 ## Author
 
-**Mujab Yousef** — DevOps & Cloud Journey 2026
-
-> Next: configuration management (Ansible)
+Mujab Yousef : A Devops and Cloud Engineer in training 
