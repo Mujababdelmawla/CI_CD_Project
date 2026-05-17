@@ -1,19 +1,41 @@
-# Task Manager — Full CI/CD Showcase Project
+# Task Manager — CI/CD Showcase Project
 
-A full-stack task manager application built to demonstrate a complete CI/CD pipeline using GitHub Actions, Jenkins, and Blue/Green deployment strategy.
+> A full-stack task manager application built to demonstrate a complete CI/CD pipeline from code push to live deployment — using GitHub Actions, Jenkins, and Blue/Green deployment strategy.
 
 ---
 
-## What This Project Demonstrates
+## Table of Contents
 
-- Continuous Integration with GitHub Actions
-- Continuous Deployment with Jenkins
-- Unit Testing with AAA pattern (pytest + vitest)
-- Artifacts — packaging and uploading build outputs
-- Webhooks — automatic Jenkins triggering on every push
-- Staging environment with health checks
-- Blue/Green deployment strategy
-- Post-deployment monitoring
+- [What This Project Is](#what-this-project-is)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [The Application](#the-application)
+- [How to Run Locally](#how-to-run-locally)
+- [Running the Tests](#running-the-tests)
+- [CI Pipeline — GitHub Actions](#ci-pipeline--github-actions)
+- [CD Pipeline — Jenkins](#cd-pipeline--jenkins)
+- [Blue/Green Deployment](#bluegreen-deployment)
+- [Post-Deployment Monitoring](#post-deployment-monitoring)
+- [Webhook Setup](#webhook-setup)
+- [Complete Flow](#complete-flow)
+
+---
+
+## What This Project Is
+
+This project showcases every concept in a real CI/CD pipeline:
+
+| Concept | Implementation |
+|---|---|
+| Continuous Integration | GitHub Actions — auto build and test on every push |
+| Continuous Deployment | Jenkins — auto deploy after CI passes |
+| Unit Testing | pytest (12 tests) + Vitest (7 tests) |
+| AAA Pattern | Every test follows Arrange → Act → Assert |
+| Artifacts | Built outputs uploaded and stored after every run |
+| Webhooks | GitHub notifies Jenkins automatically on every push |
+| Staging | Health checked environment before production |
+| Blue/Green Deployment | Zero downtime deployment with instant rollback |
+| Post-Deploy Monitoring | monitor.py verifies app health after every deployment |
 
 ---
 
@@ -23,13 +45,13 @@ A full-stack task manager application built to demonstrate a complete CI/CD pipe
 |---|---|
 | Backend | Python, Flask, Flask-CORS |
 | Frontend | React, Vite |
-| CI Platform | GitHub Actions |
-| CD Platform | Jenkins |
 | Backend Tests | pytest, pytest-cov |
 | Frontend Tests | Vitest, Testing Library |
-| Deployment | Blue/Green via nginx |
-| Monitoring | Custom monitor.py |
-| Tunnel | ngrok (local development) |
+| CI Platform | GitHub Actions |
+| CD Platform | Jenkins |
+| Deployment Strategy | Blue/Green |
+| Monitoring | monitor.py + metrics.json |
+| Local Tunnel | ngrok |
 
 ---
 
@@ -40,26 +62,26 @@ cicd-project/
 │
 ├── .github/
 │   └── workflows/
-│       └── ci.yml          # GitHub Actions CI pipeline
+│       └── ci.yml              # GitHub Actions CI pipeline
 │
 ├── backend/
-│   ├── app.py              # Flask REST API (5 endpoints)
-│   ├── test_app.py         # 12 unit tests (AAA pattern)
-│   └── requirements.txt    # Python dependencies
+│   ├── app.py                  # Flask REST API
+│   ├── test_app.py             # 12 unit tests
+│   └── requirements.txt        # Python dependencies
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── App.jsx         # Main React component
-│   │   ├── App.test.jsx    # 7 unit tests
-│   │   ├── main.jsx        # React entry point
-│   │   └── setupTests.js   # Vitest setup
+│   │   ├── App.jsx             # Main React component
+│   │   ├── App.test.jsx        # 7 unit tests
+│   │   ├── main.jsx            # React entry point
+│   │   └── setupTests.js       # Vitest configuration
 │   ├── index.html
 │   ├── package.json
 │   └── vite.config.js
 │
 ├── .gitignore
-├── Jenkinsfile             # Jenkins CD pipeline (6 stages)
-├── monitor.py              # Post-deployment health checker
+├── Jenkinsfile                 # Jenkins CD pipeline
+├── monitor.py                  # Post-deployment health checker
 └── README.md
 ```
 
@@ -71,13 +93,30 @@ A task manager where you can add, complete, and delete tasks.
 
 ### Flask API Endpoints
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/health` | GET | Health check — returns `{"status": "ok"}` |
-| `/tasks` | GET | Get all tasks |
-| `/tasks` | POST | Add a new task |
-| `/tasks/<id>` | DELETE | Delete a task by id |
-| `/tasks/<id>/done` | PATCH | Toggle task done/undone |
+| Method | Endpoint | Description | Response |
+|---|---|---|---|
+| GET | `/health` | Health check | `{"status": "ok"}` |
+| GET | `/tasks` | Get all tasks | List of tasks |
+| POST | `/tasks` | Add a new task | Created task |
+| DELETE | `/tasks/<id>` | Delete a task | Success message |
+| PATCH | `/tasks/<id>/done` | Toggle done/undone | Updated task |
+
+### How Frontend and Backend Connect
+
+```
+React (port 5173)
+      ↓
+User clicks Add
+      ↓
+POST /tasks → Vite proxy → Flask (port 5000)
+      ↓
+Flask creates task → returns JSON
+      ↓
+React updates UI
+```
+
+The proxy in `vite.config.js` forwards all `/tasks` and `/health`
+requests from React to Flask during development.
 
 ---
 
@@ -86,14 +125,12 @@ A task manager where you can add, complete, and delete tasks.
 ### Requirements
 - Python 3.10+
 - Node.js 18+
-- pip
-- npm
 
 ### Terminal 1 — Flask Backend
 ```bash
 cd backend
 python3 -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
+source venv/bin/activate
 pip install -r requirements.txt
 python app.py
 # Running at http://localhost:5000
@@ -109,209 +146,360 @@ npm run dev
 
 Open `http://localhost:5173` in your browser.
 
-### Run Tests
+> Flask must be running before opening the React app,
+> otherwise it shows "Could not connect to backend."
 
-**Backend:**
+---
+
+## Running the Tests
+
+### Backend — 12 Tests
 ```bash
 cd backend
 source venv/bin/activate
 pytest -v --cov=app --cov-report=term-missing
 ```
 
-**Frontend:**
+**What is tested:**
+- Health endpoint returns 200
+- GET tasks returns empty list and all tasks
+- POST task creates correctly with auto-increment ID
+- POST task with missing or empty title returns 400
+- DELETE task removes it and returns 200
+- DELETE non-existent task returns 404
+- PATCH toggles task done and back to undone
+- PATCH non-existent task returns 404
+
+### Frontend — 7 Tests
 ```bash
 cd frontend
 npm test
 ```
 
+**What is tested:**
+- App renders the title
+- Shows empty state when no tasks
+- Renders tasks fetched from API
+- Adds task when Add button clicked
+- Shows error for empty task input
+- Removes task when delete clicked
+- Toggles task to done when check clicked
+
+> All tests follow the AAA pattern:
+> Arrange (set up data) → Act (run the function) → Assert (check result)
+
 ---
 
-## CI/CD Pipeline
+## CI Pipeline — GitHub Actions
 
-### GitHub Actions — CI (ci.yml)
+**File:** `.github/workflows/ci.yml`
+**Trigger:** Every push or pull request to `main`
+**Runs on:** GitHub's Ubuntu cloud runners
 
-Triggers on every push to `main`.
+### Pipeline Jobs
 
 ```
 Job 1: backend-ci
-  → Checkout code
-  → Setup Python 3.10
-  → pip install -r requirements.txt
-  → pytest -v --cov=app
-  → Upload backend artifact
-
-Job 2: frontend-ci (needs: backend-ci)
-  → Checkout code
-  → Setup Node 18
-  → npm install
-  → npm test
-  → npm run build
-  → Upload frontend artifact (dist/)
-
-Job 3: ci-success (needs: both)
-  → Confirms all checks passed
+         ↓
+Job 2: frontend-ci    (needs: backend-ci)
+         ↓
+Job 3: ci-success     (needs: backend-ci + frontend-ci)
 ```
 
-Total CI time: ~26 seconds
+The `needs` keyword controls order — if backend-ci fails,
+frontend-ci never starts. Nothing runs unless the previous job passed.
 
-### Jenkins — CD (Jenkinsfile)
+### Job 1 — backend-ci
+```
+→ Checkout code
+→ Setup Python 3.10
+→ pip install -r requirements.txt
+→ pytest -v --cov=app --cov-report=term-missing
+→ Upload backend artifact
+```
 
-Triggers automatically via GitHub webhook.
+### Job 2 — frontend-ci
+```
+→ Checkout code
+→ Setup Node 18
+→ npm install
+→ npm test
+→ npm run build
+→ Upload frontend artifact (dist/)
+```
+
+### Job 3 — ci-success
+```
+→ Prints success confirmation
+→ Only runs if BOTH jobs passed
+```
+
+**Total CI time: ~26 seconds**
+
+### What is an Artifact?
+The packaged output of the pipeline stored on GitHub for 7 days:
+- `backend-build` — Python files ready to deploy
+- `frontend-build` — compiled React `dist/` folder ready to serve
+
+---
+
+## CD Pipeline — Jenkins
+
+**File:** `Jenkinsfile` (project root)
+**Trigger:** GitHub webhook on every push
+**Language:** Groovy (Declarative Pipeline)
+
+### Pipeline Stages
 
 ```
 Stage 1: Checkout
-  → Pulls latest code from GitHub
-
 Stage 2: Backend CI
-  → Creates Python virtual environment
-  → Installs dependencies
-  → Runs all tests with coverage
-
 Stage 3: Frontend CI
-  → npm install
-  → npm test
-  → npm run build
-
 Stage 4: Deploy to Staging
-  → Starts Flask on port 5000
-  → Runs health check: GET /health
-  → Stops pipeline if unhealthy
-
 Stage 5: Blue/Green Deploy
-  → Checks active environment (blue/green)
-  → Deploys new version to inactive environment
-  → Health checks new environment
-  → Switches traffic if healthy
-  → Old environment stays live as rollback
-
 Stage 6: Monitor
-  → Runs monitor.py
-  → 3 health checks with 2 second gaps
-  → Saves metrics to metrics.json
-  → exit(0) = success | exit(1) = failure
 ```
 
-Total CD time: ~48 seconds
+If any stage fails — the pipeline stops immediately.
+Nothing after it runs. The old version stays live.
+
+### Stage 1 — Checkout
+```groovy
+checkout scm
+```
+Clones the latest code from GitHub into the Jenkins agent.
+SCM = Source Code Management.
+
+### Stage 2 — Backend CI
+```bash
+python3 -m venv myvenv
+. myvenv/bin/activate
+pip install -r requirements.txt
+pytest -v --cov=app --cov-report=term-missing
+```
+Creates a virtual environment because Jenkins uses Python 3.12
+which blocks system-wide pip installs.
+
+### Stage 3 — Frontend CI
+```bash
+npm install
+npm test
+npm run build
+```
+Fresh install every time. `node_modules` is excluded from git
+via `.gitignore` so permissions are always correct.
+
+### Stage 4 — Deploy to Staging
+```bash
+pkill -f "python app.py" || true
+nohup python app.py > /tmp/staging.log 2>&1 &
+sleep 3
+curl -f http://localhost:5000/health || exit 1
+```
+Starts Flask in the background and immediately health checks it.
+If the health check fails — `exit 1` — pipeline stops.
+Nothing reaches production.
+
+### Stage 5 — Blue/Green Deploy
+```bash
+# Check which environment is live
+# Deploy new version to the inactive environment
+# Health check the new environment
+# Switch traffic if healthy
+# Old environment stays running as rollback
+```
+
+### Stage 6 — Monitor
+```bash
+. backend/myvenv/bin/activate
+pip install requests
+python monitor.py
+```
+Runs 3 health checks after deployment.
+Saves results to `metrics.json`.
+`exit(0)` = success. `exit(1)` = pipeline fails.
+
+### Post Block
+```
+success → "Pipeline PASSED — new version is live"
+failure → "Pipeline FAILED — old environment stays live"
+always  → "Pipeline finished"
+```
+
+
 
 ---
 
 ## Blue/Green Deployment
 
-Two identical environments always running:
+### The Concept
+Two identical environments always running.
+Only one serves real users at a time.
 
 ```
-BLUE  → port 5001 (current live version)
-GREEN → port 5002 (new version being deployed)
+BLUE  → port 5001 → current live version (v1)
+GREEN → port 5002 → new version being deployed (v2)
 ```
 
-**Deployment flow:**
+### The Deployment Flow
+
 ```
-New version deploys to GREEN (inactive)
-        ↓
-Health check passes on GREEN
-        ↓
-Traffic switches from BLUE to GREEN
-        ↓
-BLUE stays running as instant rollback
+Step 1: New version deploys to GREEN (inactive)
+              ↓
+Step 2: Health check runs on GREEN
+              ↓
+Step 3: Health check passes
+              ↓
+Step 4: Traffic switches from BLUE to GREEN
+              ↓
+Step 5: BLUE stays running as instant rollback
 ```
 
-**Rollback:**
-If the health check on GREEN fails — traffic never switches. BLUE continues serving users with zero downtime.
+### If Health Check Fails
+
+```
+New version deploys to GREEN
+              ↓
+Health check FAILS on GREEN
+              ↓
+Pipeline stops immediately
+              ↓
+Traffic never switches
+              ↓
+BLUE keeps serving users — zero downtime
+```
+
+### Comparison with Other Strategies
+
+| Strategy | Environments | Downtime | Rollback |
+|---|---|---|---|
+| Blue/Green | Two identical | Zero | Instant |
+| Canary | Two (small/full) | Zero | Easy |
+| Rolling | One (gradual) | Minimal | Partial |
 
 ---
 
-## Monitoring
+## Post-Deployment Monitoring
 
-`monitor.py` runs after every deployment:
+**File:** `monitor.py`
 
-- Hits `/health` endpoint 3 times
-- Measures response latency
-- Handles connection errors and timeouts
-- Saves results to `metrics.json`
-- Controls Jenkins result via exit code
+Runs automatically after every deployment as Stage 6 in Jenkins.
 
-**Sample metrics.json output:**
+### What It Does
+
+```
+Run 3 health checks with 2 second gaps
+          ↓
+Check 1 → GET /health → record status + latency
+  wait 2s
+Check 2 → GET /health → record status + latency
+  wait 2s
+Check 3 → GET /health → record status + latency
+          ↓
+Calculate: passed, failed, average latency
+          ↓
+Save results to metrics.json
+          ↓
+exit(0) all healthy  → Jenkins GREEN
+exit(1) any failed   → Jenkins RED
+```
+
+### Three Possible Outcomes Per Check
+
+| Outcome | Meaning |
+|---|---|
+| 200 OK | App is healthy — records latency |
+| ConnectionError | App is not running at all |
+| Timeout | App is running but not responding within 10s |
+
+### Sample metrics.json Output
+
 ```json
 {
   "url": "http://localhost:5000",
   "total_checks": 3,
   "passed": 3,
   "failed": 0,
-  "avg_latency": 45.2,
-  "status": "HEALTHY"
+  "avg_latency": 45.23,
+  "status": "HEALTHY",
+  "results": [
+    {
+      "check": 1,
+      "status_code": 200,
+      "latency_ms": 43.12,
+      "healthy": true,
+      "timestamp": "2026-05-16T10:30:00Z"
+    }
+  ]
 }
 ```
 
 ---
 
-## Webhook Setup (Local Development)
+## Webhook Setup
 
-Since Jenkins runs locally, ngrok is used to expose it to GitHub:
+Jenkins runs locally so ngrok is used to give it a public URL
+that GitHub can reach.
+
+### Why ngrok?
+
+```
+GitHub (internet) → needs public URL → your laptop has none
+
+ngrok solution:
+GitHub → https://your-url.ngrok-free.dev → ngrok tunnel → localhost:8080 → Jenkins
+```
+
+### Setup Steps
 
 ```bash
-# Start ngrok
+# 1 — Start ngrok
 ngrok http 8080
 
-# Copy the forwarding URL e.g:
+# 2 — Copy the forwarding URL e.g:
 # https://blasphemy-penny-reviver.ngrok-free.dev
 
-# Add webhook in GitHub:
-# Settings → Webhooks → Add webhook
-# Payload URL: https://your-ngrok-url.ngrok-free.dev/github-webhook/
+# 3 — Add webhook in GitHub:
+# Repo → Settings → Webhooks → Add webhook
+# Payload URL : https://your-url.ngrok-free.dev/github-webhook/
 # Content type: application/json
-# Event: Just the push event
+# Event       : Just the push event
 ```
+
+> In production Jenkins runs on a cloud server with a real
+> public IP — ngrok is not needed.
 
 ---
 
-## Complete Flow — End to End
+## Complete Flow
 
 ```
-git push to main
-        ↓
-GitHub Actions triggers (CI)          ~26 seconds
+Developer pushes code to GitHub
+              ↓
+GitHub Actions triggers automatically
   ✓ 12 Flask tests passed
   ✓ 7 React tests passed
-  ✓ React app built
+  ✓ React app built into dist/
   ✓ Artifacts uploaded
-        ↓
-GitHub webhook fires → ngrok → Jenkins
-        ↓
-Jenkins pipeline triggers (CD)        ~48 seconds
-  ✓ Code checked out
-  ✓ Backend tested
-  ✓ Frontend tested and built
-  ✓ Staging health check passed
-  ✓ New version deployed to green
+              ↓
+GitHub webhook fires → ngrok → Jenkins triggers
+              ↓
+Jenkins pipeline runs
+  ✓ Code checked out from GitHub
+  ✓ Backend installed and tested
+  ✓ Frontend installed, tested, built
+  ✓ Staged and health checked
+  ✓ New version deployed to green environment
   ✓ Traffic switched to green
-  ✓ monitor.py confirmed healthy
-        ↓
-Deployment complete ✅
-Total: ~74 seconds from push to live
+  ✓ monitor.py ran 3 health checks
+  ✓ metrics.json saved
+              ↓
+Deployment complete
+Total time: ~74 seconds from push to live
 ```
-
----
-
-## Key Concepts Demonstrated
-
-| Concept | Implementation |
-|---|---|
-| CI | GitHub Actions ci.yml |
-| CD | Jenkins Jenkinsfile |
-| Unit Testing | pytest (12 tests) + vitest (7 tests) |
-| AAA Pattern | Every test in test_app.py and App.test.jsx |
-| Artifacts | upload-artifact@v4 in ci.yml |
-| needs keyword | frontend-ci needs backend-ci |
-| Webhooks | GitHub → ngrok → Jenkins |
-| Staging | Stage 4 in Jenkinsfile |
-| Blue/Green | Stage 5 in Jenkinsfile |
-| Health Check | /health endpoint + curl + monitor.py |
-| Post-deploy Monitor | monitor.py with metrics.json |
-| Virtual Environment | python3 -m venv in Jenkins |
-| gitignore | node_modules, __pycache__, dist, .env |
 
 ---
 
 ## Author
 
-Mujab Yousef : A Devops and Cloud Engineer in training 
+Mujab Yousef : Devops and Cloud Engineer in Training 

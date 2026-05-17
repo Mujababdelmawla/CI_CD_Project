@@ -1,34 +1,37 @@
 {
   "url": "http://localhost:5000",
   "total_checks": 3,
-  "passed": 3,
-  "failed": 0,
-  "avg_latency": 8.67,
-  "status": "HEALTHY",
+  "passed": 0,
+  "failed": 3,
+  "avg_latency": 0.0,
+  "status": "UNHEALTHY",
   "results": [
     {
       "check": 1,
       "url": "http://localhost:5000/health",
-      "status_code": 200,
-      "latency_ms": 13.84,
-      "healthy": true,
-      "timestamp": "2026-05-17T06:28:47.620602Z"
+      "status_code": null,
+      "latency_ms": null,
+      "healthy": false,
+      "error": "Connection refused \u2014 is the app running?",
+      "timestamp": "2026-05-17T07:55:40.344661Z"
     },
     {
       "check": 2,
       "url": "http://localhost:5000/health",
-      "status_code": 200,
-      "latency_ms": 5.16,
-      "healthy": true,
-      "timestamp": "2026-05-17T06:28:49.627993Z"
+      "status_code": null,
+      "latency_ms": null,
+      "healthy": false,
+      "error": "Connection refused \u2014 is the app running?",
+      "timestamp": "2026-05-17T07:55:42.357522Z"
     },
     {
       "check": 3,
       "url": "http://localhost:5000/health",
-      "status_code": 200,
-      "latency_ms": 7.0,
-      "healthy": true,
-      "timestamp": "2026-05-17T06:28:51.635964Z"
+      "status_code": null,
+      "latency_ms": null,
+      "healthy": false,
+      "error": "Connection refused \u2014 is the app running?",
+      "timestamp": "2026-05-17T07:55:44.364889Z"
     }
   ]
 }

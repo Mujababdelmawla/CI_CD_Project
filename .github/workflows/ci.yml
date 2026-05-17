@@ -8,7 +8,7 @@ on:
 
 jobs:
 
-  # ── Job 1: Flask Backend CI ─────────────────────────────────────────────────
+  # Job 1: Flask Backend CI 
   backend-ci:
     name: Backend — Install, Test, Package
     runs-on: ubuntu-latest
@@ -45,7 +45,7 @@ jobs:
           name: backend-build
           path: artifact/backend/
 
-  # ── Job 2: React Frontend CI ────────────────────────────────────────────────
+  # Job 2: React Frontend CI 
   frontend-ci:
     name: Frontend — Install, Test, Build
     runs-on: ubuntu-latest
@@ -80,7 +80,7 @@ jobs:
           name: frontend-build
           path: frontend/dist/
 
-  # ── Job 3: CI Summary ───────────────────────────────────────────────────────
+  # Job 3: CI Summary
   # Runs only if BOTH backend-ci and frontend-ci pass
   ci-success:
     name: CI Complete

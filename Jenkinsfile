@@ -2,15 +2,15 @@ pipeline {
     agent any
 
     environment {
-        BACKEND_PORT  = '5000'
-        BLUE_PORT     = '8081'
+        BACKEND_PORT  = '5000'    // we have defined those as veriables because if we need 
+        BLUE_PORT     = '8081'    // to change port we just need to change the value of the variable
         GREEN_PORT    = '8082'
         ACTIVE_ENV    = 'blue'
     }
 
     stages {
 
-        // ── Stage 1: Checkout ──────────────────────────────────────────────
+        // Stage 1: Checkout
         stage('Checkout') {
             steps {
                 echo '========================================='
@@ -21,7 +21,7 @@ pipeline {
             }
         }
 
-        // ── Stage 2: Backend CI ────────────────────────────────────────────
+        // Stage 2: Backend CI 
         stage('Backend CI') {
             steps {
                 echo '========================================='
@@ -37,7 +37,7 @@ pipeline {
             }
         }
 
-        // ── Stage 3: Frontend CI ───────────────────────────────────────────
+        // Stage 3: Frontend CI
         stage('Frontend CI') {
             steps {
                 echo '========================================='
@@ -52,15 +52,15 @@ pipeline {
             }
         }
 
-        // ── Stage 4: Deploy to Staging ─────────────────────────────────────
+        // Stage 4: Deploy to Staging 
         stage('Deploy to Staging') {
-            steps {
+            steps { 
                 echo '========================================='
                 echo ' Stage 4: Deploying to Staging'
                 echo '========================================='
-                sh '''
+                sh ''' 
                     echo "Stopping any existing staging server..."
-                    pkill -f "python app.py" || true
+                    pkill -f "python app.py" || true      
 
                     cd backend
                     . myvenv/bin/activate 
@@ -77,7 +77,7 @@ pipeline {
             }
         }
 
-        // ── Stage 5: Blue/Green Deployment ────────────────────────────────
+        // Stage 5: Blue/Green Deployment
         stage('Blue/Green Deploy') {
             steps {
                 echo '========================================='
@@ -95,9 +95,9 @@ pipeline {
                     fi
 
                     echo "Deploying new version to ${NEXT_ENV} on port ${DEPLOY_PORT}..."
-
-                    pkill -f "port_${DEPLOY_PORT}" || true
-                    sleep 2
+                     
+                    pkill -f "port_${DEPLOY_PORT}" || true     
+                    sleep 2  
 
                     cd backend
                     nohup python app.py > /tmp/${NEXT_ENV}.log 2>&1 &
@@ -113,7 +113,7 @@ pipeline {
             }
         }
 
-        // ── Stage 6: Monitor to check the health ──────────────────────────────────────────────
+        // Stage 6: Monitor to check the health
         stage('Monitor') {
             steps {
                 echo '========================================='
@@ -129,7 +129,7 @@ pipeline {
         }
     }
 
-    // ── Post Actions ──────────────────────────────────────────────────────
+    // Post Actions
     post {
         success {
             echo '========================================='

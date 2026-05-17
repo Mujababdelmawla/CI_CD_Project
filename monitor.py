@@ -4,12 +4,12 @@ import time
 import json
 from datetime import datetime
 
-# ── Configuration ─────────────────────────────────────────────────────────────
+# Configuration 
 URL = os.getenv('SITE_URL', 'http://localhost:5000')  # gets URL from environment
 CHECKS = 3       # number of times to check
 WAIT   = 2       # seconds between checks
 
-# ── Results storage ───────────────────────────────────────────────────────────
+# Results storage
 results = []
 
 print('=========================================')
@@ -17,8 +17,8 @@ print(' Task Manager — Deployment Monitor')
 print(f' Checking: {URL}')
 print('=========================================')
 
-# ── Run health checks ─────────────────────────────────────────────────────────
-for i in range(1, CHECKS + 1):
+# Run health checks
+for i in range(1, CHECKS + 1): # checks = 3 the range will be (1,checks+1) range (1,4) = [1,2,3]
     print(f'\nCheck {i} of {CHECKS}...')
 
     try:
@@ -72,7 +72,7 @@ for i in range(1, CHECKS + 1):
     if i < CHECKS:
         time.sleep(WAIT)
 
-# ── Summary ───────────────────────────────────────────────────────────────────
+# ── Summary 
 passed = sum(1 for r in results if r['healthy'])
 failed = CHECKS - passed
 
@@ -101,13 +101,13 @@ print(f'  Avg latency  : {avg_latency}ms')
 print(f'  Status       : {summary["status"]}')
 print('=========================================')
 
-# ── Save metrics to file ──────────────────────────────────────────────────────
+#  Save metrics to file 
 with open('metrics.json', 'w') as f:
     json.dump(summary, f, indent=2)
 
 print('\nMetrics saved to metrics.json')
 
-# ── Exit code ─────────────────────────────────────────────────────────────────
+#  Exit code 
 # exit 1 = pipeline fails if app is unhealthy
 if failed > 0:
     print('DEPLOYMENT MONITOR: App is unhealthy — check logs!')
