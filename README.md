@@ -18,6 +18,7 @@
 - [Post-Deployment Monitoring](#post-deployment-monitoring)
 - [Webhook Setup](#webhook-setup)
 - [Complete Flow](#complete-flow)
+- [Screenshots](#screenshots)
 
 ---
 
@@ -79,6 +80,7 @@ cicd-project/
 │   ├── package.json
 │   └── vite.config.js
 │
+├── screenshots/                # Project screenshots
 ├── .gitignore
 ├── Jenkinsfile                 # Jenkins CD pipeline
 ├── monitor.py                  # Post-deployment health checker
@@ -236,11 +238,6 @@ frontend-ci never starts. Nothing runs unless the previous job passed.
 
 **Total CI time: ~26 seconds**
 
-### What is an Artifact?
-The packaged output of the pipeline stored on GitHub for 7 days:
-- `backend-build` — Python files ready to deploy
-- `frontend-build` — compiled React `dist/` folder ready to serve
-
 ---
 
 ## CD Pipeline — Jenkins
@@ -268,7 +265,6 @@ Nothing after it runs. The old version stays live.
 checkout scm
 ```
 Clones the latest code from GitHub into the Jenkins agent.
-SCM = Source Code Management.
 
 ### Stage 2 — Backend CI
 ```bash
@@ -277,8 +273,6 @@ python3 -m venv myvenv
 pip install -r requirements.txt
 pytest -v --cov=app --cov-report=term-missing
 ```
-Creates a virtual environment because Jenkins uses Python 3.12
-which blocks system-wide pip installs.
 
 ### Stage 3 — Frontend CI
 ```bash
@@ -286,8 +280,6 @@ npm install
 npm test
 npm run build
 ```
-Fresh install every time. `node_modules` is excluded from git
-via `.gitignore` so permissions are always correct.
 
 ### Stage 4 — Deploy to Staging
 ```bash
@@ -296,43 +288,39 @@ nohup python app.py > /tmp/staging.log 2>&1 &
 sleep 3
 curl -f http://localhost:5000/health || exit 1
 ```
-Starts Flask in the background and immediately health checks it.
-If the health check fails — `exit 1` — pipeline stops.
-Nothing reaches production.
+If health check fails — pipeline stops. Nothing reaches production.
 
 ### Stage 5 — Blue/Green Deploy
-```bash
-# Check which environment is live
-# Deploy new version to the inactive environment
-# Health check the new environment
-# Switch traffic if healthy
-# Old environment stays running as rollback
+```
+Check active environment (blue or green)
+Deploy new version to inactive environment
+Health check new environment
+Switch traffic if healthy
+Old environment stays as instant rollback
 ```
 
 ### Stage 6 — Monitor
 ```bash
-. backend/myvenv/bin/activate
-pip install requests
 python monitor.py
 ```
-Runs 3 health checks after deployment.
-Saves results to `metrics.json`.
-`exit(0)` = success. `exit(1)` = pipeline fails.
+Runs 3 health checks. Saves metrics.json.
+exit(0) = success. exit(1) = pipeline fails.
 
 ### Post Block
 ```
-success → "Pipeline PASSED — new version is live"
-failure → "Pipeline FAILED — old environment stays live"
-always  → "Pipeline finished"
+success → Pipeline PASSED — new version is live
+failure → Pipeline FAILED — old environment stays live
+always  → Pipeline finished
 ```
 
-
+**Total CD time: ~48 seconds**
 
 ---
 
 ## Blue/Green Deployment
 
 ### The Concept
+
 Two identical environments always running.
 Only one serves real users at a time.
 
@@ -341,7 +329,7 @@ BLUE  → port 5001 → current live version (v1)
 GREEN → port 5002 → new version being deployed (v2)
 ```
 
-### The Deployment Flow
+### Deployment Flow
 
 ```
 Step 1: New version deploys to GREEN (inactive)
@@ -360,22 +348,12 @@ Step 5: BLUE stays running as instant rollback
 ```
 New version deploys to GREEN
               ↓
-Health check FAILS on GREEN
+Health check FAILS
               ↓
-Pipeline stops immediately
-              ↓
-Traffic never switches
+Pipeline stops — traffic never switches
               ↓
 BLUE keeps serving users — zero downtime
 ```
-
-### Comparison with Other Strategies
-
-| Strategy | Environments | Downtime | Rollback |
-|---|---|---|---|
-| Blue/Green | Two identical | Zero | Instant |
-| Canary | Two (small/full) | Zero | Easy |
-| Rolling | One (gradual) | Minimal | Partial |
 
 ---
 
@@ -390,11 +368,7 @@ Runs automatically after every deployment as Stage 6 in Jenkins.
 ```
 Run 3 health checks with 2 second gaps
           ↓
-Check 1 → GET /health → record status + latency
-  wait 2s
-Check 2 → GET /health → record status + latency
-  wait 2s
-Check 3 → GET /health → record status + latency
+Each check: GET /health → record status + latency
           ↓
 Calculate: passed, failed, average latency
           ↓
@@ -403,14 +377,6 @@ Save results to metrics.json
 exit(0) all healthy  → Jenkins GREEN
 exit(1) any failed   → Jenkins RED
 ```
-
-### Three Possible Outcomes Per Check
-
-| Outcome | Meaning |
-|---|---|
-| 200 OK | App is healthy — records latency |
-| ConnectionError | App is not running at all |
-| Timeout | App is running but not responding within 10s |
 
 ### Sample metrics.json Output
 
@@ -421,16 +387,7 @@ exit(1) any failed   → Jenkins RED
   "passed": 3,
   "failed": 0,
   "avg_latency": 45.23,
-  "status": "HEALTHY",
-  "results": [
-    {
-      "check": 1,
-      "status_code": 200,
-      "latency_ms": 43.12,
-      "healthy": true,
-      "timestamp": "2026-05-16T10:30:00Z"
-    }
-  ]
+  "status": "HEALTHY"
 }
 ```
 
@@ -438,16 +395,16 @@ exit(1) any failed   → Jenkins RED
 
 ## Webhook Setup
 
-Jenkins runs locally so ngrok is used to give it a public URL
-that GitHub can reach.
+Jenkins runs locally so ngrok exposes it to GitHub.
 
 ### Why ngrok?
 
 ```
-GitHub (internet) → needs public URL → your laptop has none
+GitHub needs a public URL to send webhook to
+Jenkins is on localhost — no public URL
+ngrok creates a tunnel:
 
-ngrok solution:
-GitHub → https://your-url.ngrok-free.dev → ngrok tunnel → localhost:8080 → Jenkins
+GitHub → https://your-url.ngrok-free.dev → localhost:8080 → Jenkins
 ```
 
 ### Setup Steps
@@ -456,8 +413,7 @@ GitHub → https://your-url.ngrok-free.dev → ngrok tunnel → localhost:8080 �
 # 1 — Start ngrok
 ngrok http 8080
 
-# 2 — Copy the forwarding URL e.g:
-# https://blasphemy-penny-reviver.ngrok-free.dev
+# 2 — Copy the forwarding URL
 
 # 3 — Add webhook in GitHub:
 # Repo → Settings → Webhooks → Add webhook
@@ -476,7 +432,7 @@ ngrok http 8080
 ```
 Developer pushes code to GitHub
               ↓
-GitHub Actions triggers automatically
+GitHub Actions triggers automatically      ~26 seconds
   ✓ 12 Flask tests passed
   ✓ 7 React tests passed
   ✓ React app built into dist/
@@ -484,22 +440,52 @@ GitHub Actions triggers automatically
               ↓
 GitHub webhook fires → ngrok → Jenkins triggers
               ↓
-Jenkins pipeline runs
+Jenkins pipeline runs                      ~48 seconds
   ✓ Code checked out from GitHub
   ✓ Backend installed and tested
   ✓ Frontend installed, tested, built
   ✓ Staged and health checked
-  ✓ New version deployed to green environment
+  ✓ New version deployed to green
   ✓ Traffic switched to green
   ✓ monitor.py ran 3 health checks
   ✓ metrics.json saved
               ↓
-Deployment complete
-Total time: ~74 seconds from push to live
+Total: ~74 seconds from push to live ✅
 ```
+
+---
+
+## Screenshots
+
+### React App — Running on port 5173
+![React UI](screenshots/react-ui-5173.png)
+
+### Flask API — Health Endpoint
+![Flask Health](screenshots/5000-health.png)
+
+### Flask API — Tasks with Completed Status
+![Completed Tasks](screenshots/completed-tasks-5000.png)
+
+### GitHub Actions — Full CI Pipeline Green
+![GitHub Actions Pipeline](screenshots/githubactions-pipeline.png)
+
+### Jenkins — Full CD Pipeline Output
+![Jenkins Pipeline](screenshots/Jenkins-pipeline-output.png)
+
+### ngrok — Payload Link
+![ngrok Payload](screenshots/ngrok-payload-link.png)
+
+### GitHub Webhook — ngrok Link Connected
+![Webhook ngrok Link](screenshots/webhook-ngrok-link.png)
+
+### monitor.py — Monitoring Output
+![Monitoring Output](screenshots/monitoring-output.png)
+
+### metrics.json — Output After Deployment
+![Metrics Output](screenshots/metrics-output.png)
 
 ---
 
 ## Author
 
-Mujab Yousef : Devops and Cloud Engineer in Training 
+**Mujab Yousef** — DevOps And Cloud Engineer In Training 
